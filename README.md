@@ -1,6 +1,6 @@
 # Masteroppgave
 
-Used for the master's thesis IT3920, spring 2025, by Eivind Midtbø Øyulvstad and Thomas Nitsche. Much is the same as in this repo: https://github.com/bjorafla/master, and our repo is essentially a fork.
+Used for the master's thesis TDT4900, spring 2026, by Tonje Halse. Much is the same as in this repo: https://github.com/eivindmidtbo/masteroppgave, and my repo is essentially a fork. That repo is again a fork of this repo: https://github.com/bjorafla/master.
 
 In our thesis paper, the bucketing strategy referred to as *strict* is called *original* in the codebase.
 
