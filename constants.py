@@ -44,3 +44,8 @@ COLOR_MAP_DATASET = {
     "rome": "green",
     
 }
+
+
+# Output folders for preprocessed trajectories (relative to project root)
+PORTO_OUTPUT_FOLDER = "dataset/porto/output"
+ROME_OUTPUT_FOLDER = "dataset/rome/output"
