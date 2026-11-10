@@ -10,12 +10,37 @@ In our thesis paper, the bucketing strategy referred to as *strict* is called *o
 
 # Setup
 
-- Install GCC
-- Clone repo
-- CD into traj-dist-master
-- Run python setup.py install
-- Run pip install .
-- install other eventual dependencies (numpy, ++)
+Tested locally on Windows 11 with Python 3.14. The original code was run on NTNU's IDUN cluster (Linux, Python 3.13).
+
+### 1. Install a C compiler
+
+`traj-dist` and `cityhash` are compiled during installation, so a C compiler is required.
+
+### 2. Create a virtual environment and install dependencies
+
+From the repository root:
+
+```powershell
+py -3.14 -m venv .venv
+.\.venv\Scripts\Activate.ps1 
+python -m pip install --upgrade pip setuptools wheel
+pip install -r requirements.txt
+```
+
+### 3. Verify the installation
+
+Run from the repository root:
+
+```powershell
+python -c "from computation import similarity; print('repo imports OK')"
+```
+
+### Datasets
+
+The raw datasets are not included in the repository. Place them at:
+
+- Porto ([ECML/PKDD 2015 taxi trajectories, Kaggle](https://www.kaggle.com/c/pkdd-15-predict-taxi-service-trajectory-i)): `dataset/porto/porto_raw.csv`
+- Rome ([CRAWDAD roma/taxi](https://ieee-dataport.org/open-access/crawdad-romataxi)): `dataset/rome/rome_raw.txt`
 
 # Troubleshooting and issues
 
