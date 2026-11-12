@@ -217,6 +217,8 @@ dataset/porto/*.csv
 dataset/porto/output/*.txt
 !dataset/porto/output/META-*.txt
 
+dataset/geolife/raw/
+
 #HASHES
 dataset/hashed_data/disk/porto/*.txt
 dataset/hashed_data/disk/porto/META-*.txt
@@ -242,3 +244,5 @@ visualization/output/rome/*
 *.html
 
 *.csv
+
+docs/*.pdf

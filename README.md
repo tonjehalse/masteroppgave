@@ -41,6 +41,17 @@ The raw datasets are not included in the repository. Place them at:
 
 - Porto ([ECML/PKDD 2015 taxi trajectories, Kaggle](https://www.kaggle.com/c/pkdd-15-predict-taxi-service-trajectory-i)): `dataset/porto/porto_raw.csv`
 - Rome ([CRAWDAD roma/taxi](https://ieee-dataport.org/open-access/crawdad-romataxi)): `dataset/rome/rome_raw.txt`
+- GeoLife ([GeoLife GPS Trajectories 1.3, Microsoft Research](https://www.microsoft.com/en-us/download/details.aspx?id=52367)): extract the zip so that the user folders end up in `dataset/geolife/raw/Data/` (`000/` … `181/`, each with `Trajectory/*.plt`). Not preprocessed yet.
+
+  ```powershell
+  New-Item -ItemType Directory -Force dataset\geolife\raw
+  Expand-Archive "$HOME\Downloads\Geolife Trajectories 1.3.zip" -DestinationPath dataset\geolife\raw
+  # The zip contains a top folder; move its contents up one level
+  Move-Item "dataset\geolife\raw\Geolife Trajectories 1.3\*" dataset\geolife\raw\
+  Remove-Item "dataset\geolife\raw\Geolife Trajectories 1.3"
+  ```
+
+  Expected: 182 user folders, 18 670 `.plt` files, 69 `labels.txt` files, about 1.6 GB.
 
 # Troubleshooting and issues
 
