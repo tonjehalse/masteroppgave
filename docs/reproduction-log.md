@@ -365,3 +365,112 @@ The candidate ratio is the key number: DTW on candidates dominates runtime, so f
   Discuss this in the thesis.
 - **Hashing is not free.** It is 20–30 % of the baseline's total time, and Rome's longer trajectories double it.
   MinHash with many permutations could cost more than grid hashing, so measure it separately.
+
+---
+
+# Pilot: do DTW-similar pairs have higher shingle similarity? (2026-11-12)
+
+**What and why:** my method assumes that trajectories that are close in DTW also share many ordered cell
+shingles. If that is false, MinHash-LSH on shingles cannot work as a filter. This pilot tests the assumption
+*before* the semester. It uses the n = 500 ground truth from section 2 and computes the **exact Jaccard
+similarity** of the shingle sets for all 124 750 pairs. There is no MinHash or LSH yet, so this is the best case
+that MinHash-LSH can only approximate. It is the "pilot test" from my project plan.
+
+**Configuration**
+- Notebook: `pilot/shingle_pilot.ipynb`; only `CITY` in cell 3 changes between runs
+- `SIZE = 500`, `THETA = 0.1`, ground truth `results_true/similarity_values/{city}/dtw/{city}-dtw-500.csv`
+- Pipeline per trajectory: GPS points → cell ids → collapse consecutive repeats → set of ordered k-shingles
+  (a sequence shorter than k becomes a single shingle)
+- Cells:
+  - H3 resolutions 7, 8, 9 (edge ≈ 1.4 / 0.5 / 0.2 km), via `h3.latlng_to_cell`
+  - Square cells of 1.0 / 0.5 / 0.25 km, using a local flat-earth projection around the mean latitude
+  - **Fixed** cell borders: no random offsets and no layers
+- k = 1 (just the set of visited cells), 2, 3
+- Metrics per configuration:
+  - **AUC:** chance that a random similar pair has a higher Jaccard than a random other pair
+  - **Spearman(J, DTW)**
+  - **Similar with J=0:** similar pairs that share no shingle
+  - **Cand. ratio recall=1:** share of all pairs with Jaccard ≥ the lowest Jaccard among similar pairs
+  - **Cand. ratio recall=0.95:** the same, using the 5th percentile instead of the minimum
+- Output (local): `results_pilot/shingle_pilot_{porto,rome}_500.csv` and `.png` (histogram + DTW-vs-Jaccard scatter
+  for the configuration with the lowest candidate ratio at recall 1)
+
+**Result — Porto** (581 similar pairs; median 57 points per trajectory)
+
+| Cells | k | Cells/traj | AUC | Spearman | Similar with J=0 | Cand. ratio recall=1 | Cand. ratio recall=0.95 |
+|---|---|---|---|---|---|---|---|
+| H3 7 | 1 | 2 | 0.886 | −0.64 | 0 | 59.0 % | 59.0 % |
+| H3 8 | 1 | 5 | 0.983 | −0.69 | 0 | 22.9 % | 8.2 % |
+| H3 8 | 2 | 5 | 0.981 | −0.43 | 7 | 100 % | 5.3 % |
+| H3 9 | 1 | 11 | 0.996 | −0.64 | 0 | 13.1 % | 2.0 % |
+| H3 9 | 2 | 11 | 0.994 | −0.47 | 0 | 12.3 % | 3.2 % |
+| H3 9 | 3 | 11 | 0.985 | −0.37 | 8 | 100 % | 5.4 % |
+| Square 1.0 | 1 | 5 | 0.983 | −0.70 | 0 | 14.6 % | 9.6 % |
+| Square 0.5 | 1 | 8 | 0.994 | −0.65 | 0 | 9.4 % | 2.9 % |
+| Square 0.5 | 2 | 8 | 0.993 | −0.46 | 1 | 100 % | 2.7 % |
+| **Square 0.25** | **1** | 14 | **0.997** | −0.62 | 0 | **8.1 %** | 1.9 % |
+| Square 0.25 | 2 | 14 | 0.995 | −0.48 | 1 | 100 % | **1.8 %** |
+| Square 0.25 | 3 | 14 | 0.990 | −0.38 | 5 | 100 % | 2.9 % |
+
+All 18 rows are in the CSV. With H3 7, k = 2 and 3 lose 127 and 265 similar pairs completely.
+
+**Result — Rome** (46 similar pairs; median 111 points per trajectory)
+
+| Cells | k | Cells/traj | AUC | Spearman | Similar with J=0 | Cand. ratio recall=1 | Cand. ratio recall=0.95 |
+|---|---|---|---|---|---|---|---|
+| H3 7 | 1 | 2 | 0.959 | −0.48 | 0 | 23.7 % | 14.5 % |
+| H3 8 | 1 | 6 | 0.996 | −0.57 | 0 | 4.3 % | 1.7 % |
+| H3 8 | 2 | 6 | 0.997 | −0.39 | 0 | 2.2 % | 1.6 % |
+| H3 9 | 1 | 15 | 0.999 | −0.56 | 0 | 0.77 % | 0.63 % |
+| **H3 9** | **2** | 15 | **0.999** | −0.43 | 0 | **0.53 %** | **0.37 %** |
+| H3 9 | 3 | 15 | 0.999 | −0.33 | 0 | 0.99 % | 0.40 % |
+| Square 1.0 | 1 | 6 | 0.987 | −0.57 | 0 | 9.2 % | 6.2 % |
+| Square 0.5 | 1 | 11 | 0.997 | −0.57 | 0 | 2.0 % | 1.4 % |
+| Square 0.25 | 1 | 19 | 0.999 | −0.55 | 0 | 0.63 % | 0.55 % |
+| Square 0.25 | 2 | 19 | 0.999 | −0.44 | 0 | 0.55 % | 0.49 % |
+| Square 0.25 | 3 | 19 | 0.997 | −0.34 | 0 | 1.4 % | 0.99 % |
+
+Computing cells and exact Jaccard for all pairs took < 0.05 s per configuration.
+
+**Comparison with the baseline** (candidate ratio at recall 1, n = 500, θ = 0.1)
+
+| | Baseline: grid strict, fastest recall = 1 config (section 6) | Pilot: best exact-Jaccard config |
+|---|---|---|
+| Porto | ~10.1 % (res 1.6 km, 25 layers) | **8.1 %** (square 0.25 km, k = 1); 1.8–1.9 % at recall 0.95 |
+| Rome | ~2.3 % (res 1.4 km, 25 layers) | **0.53 %** (H3 9, k = 2), about 4× fewer candidates |
+
+**What it shows**
+- **The assumption holds.** With fine cells (H3 9 or 0.25 km squares), AUC is ≥ 0.99 in both cities: similar
+  pairs almost always have a higher Jaccard than other pairs. The plots show two clearly separated groups. Most other
+  pairs have Jaccard ≈ 0, and the similar pairs lie mostly between 0.35 and 1.
+- **Finer cells are better**, and the finest cells tested were the best in both cities. The optimum may be finer still
+  (H3 10, 0.1 km squares). Coarse cells (H3 7, 1 km) give only 2–6 cells per trajectory, which is too few to tell
+  routes apart.
+- **Order (k ≥ 2) helps only when sequences are long enough.**
+  - In Rome (15–19 cells per trajectory), k = 2 is best.
+  - In Porto (shorter trips), k ≥ 2 often leaves some similar pairs with **no shared shingle at all**. Then recall 1 is
+    impossible without keeping every pair.
+  - k = 3 is worse than k = 2 everywhere.
+  - So k should match trajectory length, or several k should be combined.
+- **In Porto, recall = 1 is decided by a few outlier pairs.** Keeping 95 % of similar pairs needs only ~1.8 % of all
+  pairs, but the last 5 % pushes the ratio to 8 %. In the scatter plot these are pairs just under DTW 0.1 with
+  Jaccard ≈ 0.2. Likely causes are fixed cell borders (a route running along a border flips between cells) and the
+  hard θ cut-off. Random offsets, several layers or multi-resolution tokens (variants in my plan) may rescue them.
+  Worth inspecting those pairs on a map.
+- Spearman is only moderate (−0.4 to −0.7) because most dissimilar pairs share nothing (Jaccard = 0), so their order
+  is arbitrary. That does not matter for filtering. AUC and candidate ratio are the relevant metrics.
+
+**Caveats**
+- **Exact Jaccard is the best case.** MinHash-LSH has an S-shaped collision curve, so to keep pairs with Jaccard as low
+  as ~0.2 (Porto) or ~0.33 (Rome) it needs a low threshold and a margin. The real candidate ratio at recall ≈ 1 will
+  be higher than these numbers.
+- These are single fixed-grid runs, not averages over 24 random offsets as in the baseline.
+- n = 500 only; Rome has 46 similar pairs.
+
+**Conclusion for the thesis:** the core idea is supported. Ordered shingles over fine cells separate DTW-similar pairs
+well. Even the exact-Jaccard best case beats the baseline's candidate ratio by ~4× in Rome but only slightly in Porto at
+recall 1. The Porto gap comes from a handful of hard pairs, which makes them an interesting target for the variants
+(random offsets, multi-resolution, combined k). Things to test in the semester:
+- finer cells;
+- whether MinHash-LSH can get close to these exact numbers;
+- whether the variants close the gap at recall 1.
