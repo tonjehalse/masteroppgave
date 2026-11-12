@@ -105,7 +105,8 @@ Total pairs: 124 750 per city.
 
 **What it shows**
 - Rome has ~13× fewer similar pairs at θ = 0.1. One pair is ~2 percentage points of recall, so Rome results are noisy.
-- DTW is a *sum* over matched points, and Rome trajectories are ~2× longer (≈111 vs ≈57 points).
+- DTW is a *sum* over matched points, and Rome trajectories are ~1.9× longer on average (n = 500: mean 110 vs 58
+  points; median 79.5 vs 50).
   The same θ is therefore effectively stricter in Rome. **θ in raw degrees does not mean the same thing across datasets.**
 - Similar pairs grow ~n², so larger n gives more stable Rome numbers.
 
@@ -208,7 +209,8 @@ than the grid. I only ran a tiny test to check that the code works and that the 
 | Rome | 1.0 | 0.065 | 0.505 | 0.112 | ~360 (0.3 %) |
 
 **What it shows**
-- **Disk is worse than grid**, as in the thesis. For similar recall, disk needs 2–3× more candidate pairs than grid 1.0 km / 3 layers.
+- **Disk is worse than grid**, as in the thesis. For similar recall, disk needs 2–4× more candidate pairs than grid 1.0 km / 3 layers
+  (e.g. Porto disk 0.6 km: ~4 100 candidates at recall 0.693, vs grid: ~1 050 at recall 0.661).
 - In both cities the larger disk gave *lower* recall. A likely cause: with 50 overlapping disks, a trajectory
   falls in more disks, so its hash sequence is longer and exact matches are rarer. Not verified.
 - Too small a sweep to compare the schemes fairly. Disk is not my main baseline anyway.
@@ -238,7 +240,9 @@ headline results, so I reproduced them exactly.
 | ≈ Candidate ratio | 10.1 % | 10.3 % | 2.3 % | 2.5 % |
 
 **What it shows**
-- **Reproduced:** all values agree within ~1–3 %. The small differences come from random grid offsets.
+- **Reproduced:** all values agree within ~1–3 %, except Rome's precision (0.016 vs 0.015) and candidate ratio
+  (2.3 % vs 2.5 %), which differ by ~7–8 % on paper. Both precisions are rounded to 3 decimals, so this is within
+  rounding. The small differences come from random grid offsets.
 - Rome's 0.999 is about one missed pair in one of the 24 runs. That is normal randomness with only 46 true pairs.
 
 ---
@@ -282,11 +286,16 @@ Earlier Porto test (not a thesis config): res 1.6 with 5 layers took 2.371 s (re
 
 **What it shows**
 - **Reproduced:** same time breakdown and similar speedups.
-- My laptop is 1.2× (Porto) to 1.4× (Rome) slower than IDUN in absolute terms. Speedups are therefore only
+- My laptop is 1.1–1.4× slower than IDUN in absolute terms (Porto: 1.07× total, 1.19× all-to-all; Rome: 1.25× total,
+  1.43× all-to-all). Speedups are therefore only
   valid when both times come from the same machine. Never divide my times by thesis times.
-- DTW on candidates is ~70–80 % of total time and hashing ~20–30 %; bucket distribution is negligible.
-- Cost per DTW pair: Porto ≈ 0.31 ms, Rome ≈ 1.5 ms. That ~5× difference matches ~2× longer trajectories
-  (DTW cost ∝ length²). Hashing per layer: Porto ≈ 0.04 s, Rome ≈ 0.085 s.
+- DTW on candidates is 67–80 % of total time and hashing 19–32 %; bucket distribution is negligible.
+- Cost per DTW pair:
+  - on candidate pairs (DTW time ÷ derived candidate count): Porto ≈ 0.31 ms, Rome ≈ 1.56 ms (5.0×);
+  - on all pairs (all-to-all time ÷ 124 750): Porto ≈ 0.33 ms, Rome ≈ 1.41 ms (4.3×). The plan uses these.
+  - The code computes each candidate pair only once, even if it shares several buckets, so both are valid.
+  - DTW cost per pair ∝ length_i × length_j, so the mean lengths matter: (110 / 58)² ≈ 3.6× explains most of the
+    difference. Hashing per layer: Porto ≈ 0.04 s, Rome ≈ 0.085 s.
 - Rome's speedup is larger because it keeps far fewer candidates (2.3 % vs 10 %) and each avoided pair is more expensive.
 
 ---
@@ -395,7 +404,7 @@ that MinHash-LSH can only approximate. It is the "pilot test" from my project pl
 - Output (local): `results_pilot/shingle_pilot_{porto,rome}_500.csv` and `.png` (histogram + DTW-vs-Jaccard scatter
   for the configuration with the lowest candidate ratio at recall 1)
 
-**Result — Porto** (581 similar pairs; median 57 points per trajectory)
+**Result — Porto** (581 similar pairs; median 50, mean 58 points per trajectory)
 
 | Cells | k | Cells/traj | AUC | Spearman | Similar with J=0 | Cand. ratio recall=1 | Cand. ratio recall=0.95 |
 |---|---|---|---|---|---|---|---|
@@ -414,7 +423,7 @@ that MinHash-LSH can only approximate. It is the "pilot test" from my project pl
 
 All 18 rows are in the CSV. With H3 7, k = 2 and 3 lose 127 and 265 similar pairs completely.
 
-**Result — Rome** (46 similar pairs; median 111 points per trajectory)
+**Result — Rome** (46 similar pairs; median 79.5, mean 110 points per trajectory)
 
 | Cells | k | Cells/traj | AUC | Spearman | Similar with J=0 | Cand. ratio recall=1 | Cand. ratio recall=0.95 |
 |---|---|---|---|---|---|---|---|
@@ -440,7 +449,8 @@ Computing cells and exact Jaccard for all pairs took < 0.05 s per configuration.
 | Rome | ~2.3 % (res 1.4 km, 25 layers) | **0.53 %** (H3 9, k = 2), about 4× fewer candidates |
 
 **What it shows**
-- **The assumption holds.** With fine cells (H3 9 or 0.25 km squares), AUC is ≥ 0.99 in both cities: similar
+- **The assumption holds.** With fine cells (H3 9 or 0.25 km squares) and k ≤ 2, AUC is ≥ 0.99 in both cities
+  (Porto H3 9 with k = 3 is 0.985): similar
   pairs almost always have a higher Jaccard than other pairs. The plots show two clearly separated groups. Most other
   pairs have Jaccard ≈ 0, and the similar pairs lie mostly between 0.35 and 1.
 - **Finer cells are better**, and the finest cells tested were the best in both cities. The optimum may be finer still
@@ -450,14 +460,15 @@ Computing cells and exact Jaccard for all pairs took < 0.05 s per configuration.
   - In Rome (15–19 cells per trajectory), k = 2 is best.
   - In Porto (shorter trips), k ≥ 2 often leaves some similar pairs with **no shared shingle at all**. Then recall 1 is
     impossible without keeping every pair.
-  - k = 3 is worse than k = 2 everywhere.
+  - k = 3 is worse than k = 2 almost everywhere. The one exception is Rome with 0.5 km squares at recall 1
+    (5.2 % vs 5.6 %), where k = 1 is best anyway (2.0 %).
   - So k should match trajectory length, or several k should be combined.
 - **In Porto, recall = 1 is decided by a few outlier pairs.** Keeping 95 % of similar pairs needs only ~1.8 % of all
   pairs, but the last 5 % pushes the ratio to 8 %. In the scatter plot these are pairs just under DTW 0.1 with
   Jaccard ≈ 0.2. Likely causes are fixed cell borders (a route running along a border flips between cells) and the
   hard θ cut-off. Random offsets, several layers or multi-resolution tokens (variants in my plan) may rescue them.
   Worth inspecting those pairs on a map.
-- Spearman is only moderate (−0.4 to −0.7) because most dissimilar pairs share nothing (Jaccard = 0), so their order
+- Spearman is only moderate (−0.3 to −0.7 in the tables) because most dissimilar pairs share nothing (Jaccard = 0), so their order
   is arbitrary. That does not matter for filtering. AUC and candidate ratio are the relevant metrics.
 
 **Caveats**
